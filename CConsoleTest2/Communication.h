@@ -11,21 +11,23 @@
 #define COMM_EM_TTHRCRFL 7
 
 #define READ_BUF_SIZE 512
+#define FILE_PACKET_SIZE 512
 #define MAX_HANDLERS_NUMBER 5
 
 #include "windows.h"
 #include "thread"
 #include "mutex"
+#include "FileIO.h"
 
 class Communication
 {
 	bool _isReadingContinued;
 	bool _isWriteThreadRunning;
 	bool _isWriteThreadSet;
-
-	bool justFlag;
+	bool _isFileModeOn;
 
 	HANDLE hPort;
+	FileIO _fileIO;
 
 	OVERLAPPED _writeSync;
 	std::mutex _writeSyncLock;
@@ -59,15 +61,22 @@ public:
 	char* GetReadBuf();
 	unsigned long GetLastTime();
 	unsigned long GetBaudrate();
+
+	void SwitchFileMode();
  
 	bool AttachBRHandler(void(*)(char*, unsigned int));
 	bool AttachBCHandler(void(*)(unsigned long));
 	bool Connect(const wchar_t* port, int baudrate, unsigned int& errMessage);
  	void Disconnect();
 
+	void SetReadFile(wchar_t* readFile);
+	void SetWriteFile(wchar_t* writeFile);
+
 	Communication& operator = (Communication& comm);
  
-	bool Write(char* line, unsigned int lineSize);
+	bool Write(char* line, unsigned long lineSize);
+
+	bool WriteFromFile(wchar_t* fileName);
 
  	void Read();
 	void CountTime();

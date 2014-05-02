@@ -13,7 +13,7 @@ Communication::Communication()
 	_isReadingContinued = false;
 	_isWriteThreadRunning = false;
 	_isWriteThreadSet = false;
-	justFlag = false;
+	_isFileModeOn = false;
 	ReadBufSize = READ_BUF_SIZE + 1;
 	ReadBuf = new char[ReadBufSize];
 	BytesPerSecond = 0;
@@ -49,6 +49,18 @@ unsigned long Communication::GetLastTime()
 unsigned long Communication::GetBaudrate()
 {
 	return _baudrate;
+}
+
+void Communication::SwitchFileMode()
+{
+	if(_isFileModeOn)
+	{
+		_isFileModeOn = false;
+	}
+	else
+	{
+		_isFileModeOn = true;
+	}
 }
 
 bool Communication::AttachBRHandler(void(*newHandler)(char*, unsigned int))
@@ -140,6 +152,16 @@ void Communication::Disconnect()
 	}
 }
 
+void Communication::SetReadFile(wchar_t* readFile)
+{
+	_fileIO.SetReadFile(readFile);
+}
+
+void Communication::SetWriteFile(wchar_t* writeFile)
+{
+	_fileIO.SetWriteFile(writeFile);
+}
+
 Communication& Communication::operator =(Communication& comm)
 {
 	if(this != &comm)
@@ -159,7 +181,7 @@ Communication& Communication::operator =(Communication& comm)
 	return *this;
 }
 
-bool Communication::Write(char* line, unsigned int lineSize)
+bool Communication::Write(char* line, unsigned long lineSize)
 {
 	while(_isWriteThreadRunning || _isWriteThreadSet)
 	{
@@ -171,10 +193,8 @@ bool Communication::Write(char* line, unsigned int lineSize)
 		CloseHandle(_writeSync.hEvent);
 	}
 	ZeroMemory(&_writeSync, sizeof(OVERLAPPED));
-
-	HANDLE hWriteCompEvent = CreateEvent(NULL, false, false, NULL);	
-	_writeSync.hEvent = hWriteCompEvent;
-	
+	_writeSync.hEvent = CreateEvent(NULL, false, false, NULL);
+		
 	if(!WriteFile(hPort, line, lineSize, NULL, &_writeSync))
 	{
 		if(GetLastError() != ERROR_IO_PENDING)
@@ -187,19 +207,16 @@ bool Communication::Write(char* line, unsigned int lineSize)
 	_isWriteThreadSet = true;
 	WriteThread = std::thread(&Communication::WriteWait, std::ref(*this));
 	WriteThread.detach();
-	//WriteFile(hPort, line, lineSize, NULL, &_writeSync);
-	//GetOverlappedResult(hPort, &_writeSync, &charsWritten, true);
 
 	return true;
-	/*else
-	{
-		lpszEditLine = (wchar_t*)realloc(lpszEditLine, (dwCharsNumber + 3)*sizeof(wchar_t));
-		lpszEditLine[dwCharsNumber]=L'\r';
-		lpszEditLine[dwCharsNumber+1]=L'\n';
-		lpszEditLine[dwCharsNumber+2]=L'\0';
-		HWND hSendEdit = GetDlgItem(hWnd, IDC_SEND_EDIT);
-		AppendTextToEdit(lpszEditLine, hSendEdit);
-	}*/
+}
+
+bool Communication::WriteFromFile(wchar_t* fileName)
+{
+	//_fileIO.AttachBRHandler(&Communication::Write); //не может быть сделано так как прототипы не соответсвуют 
+	//write принимает еще певым указатель на объект класса
+	//аттачить функцию к чтению пакета из файла, какую - write, кто будет запускать чтение следующего пакета?
+	return true;
 }
 
 //пересечение потоков; один поток модифицирует _writeSync пока другой использует его
@@ -211,9 +228,6 @@ void Communication::WriteWait()
 	if(!GetOverlappedResult(hPort, &_writeSync, &charsWritten, true))
 	{
 		MessageBox(NULL, L"GetOverlappedResult error on write", L"Error", MB_OK);
-		_isWriteThreadRunning = false;
-		_isWriteThreadSet = false;
-		return;
 	}
 
 	/*_isWriteThreadRunning = false;
@@ -237,7 +251,7 @@ void Communication::Read()
 	HANDLE hReadCompEvent = CreateEvent(NULL, false, false, NULL);
 	OVERLAPPED sync = {0};
 	sync.hEvent = hReadCompEvent;
-	while(_isReadingContinued)//remake; wait for some inner symbol of the class; set that symbol on close and join the thread;
+	while(_isReadingContinued)
 	{
 		isSuccess = ReadFile(hPort, ReadBuf, ReadBufSize, NULL, &sync);
 		if(!isSuccess)
@@ -267,7 +281,6 @@ void Communication::Read()
 			}
 		}
 	}
-	//to transmit a message to the window to close the handle of the thread
 	return;
 }
 
