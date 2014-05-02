@@ -190,8 +190,6 @@ bool Communication::Write(char* line, unsigned int lineSize)
 	//WriteFile(hPort, line, lineSize, NULL, &_writeSync);
 	//GetOverlappedResult(hPort, &_writeSync, &charsWritten, true);
 
-	printf("write worked\r\n");
-
 	return true;
 	/*else
 	{
@@ -203,7 +201,6 @@ bool Communication::Write(char* line, unsigned int lineSize)
 		AppendTextToEdit(lpszEditLine, hSendEdit);
 	}*/
 }
-
 
 //пересечение потоков; один поток модифицирует _writeSync пока другой использует его
 void Communication::WriteWait()
@@ -229,7 +226,6 @@ void Communication::WriteWait()
 	_isWriteThreadRunning = false;
 	_isWriteThreadSet = false;
 
-	printf("thread completed\r\n");
 	return;
 }
 
