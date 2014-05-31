@@ -24,10 +24,19 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Communication.h">
+    <ClInclude Include="FileIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileIO.h">
+    <ClInclude Include="ConsoleWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CommManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SerialComm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketMaker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,10 +47,16 @@
     <ClCompile Include="CConsoleTest2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Communication.cpp">
+    <ClCompile Include="FileIO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FileIO.cpp">
+    <ClCompile Include="CommManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SerialComm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketMaker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

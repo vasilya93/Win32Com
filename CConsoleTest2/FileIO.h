@@ -2,45 +2,71 @@
 #define FILEIO_H
 
 #define MAX_HANDLERS_NUM 5
-#define READ_BUF_SIZE 512
+#define FILE_MAX_BUF_SIZE 1048576
+#define FILE_READ_FULL -1
 
 #include "windows.h"
 
+class FileIOSubscribable
+{
+public:
+	FileIOSubscribable(){}
+	virtual ~FileIOSubscribable(){};
+	virtual void FileBytesReadHandler(char*, unsigned long, bool) = 0;
+	virtual void FileBytesWrittenHandler() = 0;
+};
+
 class FileIO
 {
-	wchar_t* _readFileName;
-	unsigned long _readOffset; //is it necessary to store file name - yep, for reading
+	//-------------------------------Read elements -------------------------------
+	wchar_t* _readFileName; //file data
 	HANDLE hReadFile;
-	OVERLAPPED _readSync;
 
-	unsigned long _bytesRead;
-	unsigned long _bytesRequested;
-
+	OVERLAPPED _readSync; // thread data
 	bool _isReadRunning;
-	unsigned long _readBufSize;
-	char* _readBuf;
+	
+	unsigned long _readOffset; // current operation data
+	unsigned long _bytesRequested;
+	unsigned long _bytesRead;
+	bool _isFullFile;
 
-	wchar_t* _writeFileName;
+	long _readBufSize; //buffer data
+	char* _readBuf; //it is necessary to ensure that the buffer is read before running the next read operation;
+					//it would be enough if the handlers wouldn't run threads without copying the buffer;
+
+	FileIOSubscribable* BRHandlerHosts[MAX_HANDLERS_NUM]; //handlers data
+	unsigned short BRHandlersNum;
+
+	void _readThread();
+
+	//-------------------------------Write elements -------------------------------
+
+	wchar_t* _writeFileName; //file data
 	HANDLE hWriteFile;
 
-	//bool (Communication::*BytesReadHandlers[MAX_HANDLERS_NUM])(void*, char*, unsigned long);
-	//unsigned short BRHandlersNum;
+	OVERLAPPED _writeSync; // thread data
+	bool _isWriteRunning;
+
+	unsigned long _bytesWritten; // current operation data
+
+	void _writeThread();
 
 public:
+	//Constructors and destructors
 	FileIO();
-	FileIO(unsigned long readBufSize);
 	~FileIO();
+
+	unsigned long GetBytesRead();
+	char* GetReadBuf();
 
 	void SetReadFile(wchar_t* readFile);
 	void SetWriteFile(wchar_t* _writeFile);
 
-	//bool AttachBRHandler(bool(Communication::*newHandler)(void*,char*,unsigned long));
+	bool AttachBRHandler(FileIOSubscribable* handlerHost);
 
-	bool ReadFileBytes(unsigned int bytesNum); //getting bytes with offset
-	bool WriteBytes(unsigned char* bytes, unsigned int bytesNum); //it is the task of the method to write all bytes that is why
+	bool ReadFileBytes(int bytesNum); //getting bytes with offset
+	bool WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend); //it is the task of the method to write all bytes that is why
 																	//no number of written bytes is referenced
-
-	void ReadThread();
 };
 
 #endif
