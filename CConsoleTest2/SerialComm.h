@@ -34,6 +34,7 @@ class SerialComm
 	//-----------------------------Can delete after -----------------------------
 
 	unsigned int _packetCounter;
+	unsigned long _internalHigh;
 
 	//-----------------------------Read/write common -----------------------------
 

@@ -2,7 +2,7 @@
 #define FILEIO_H
 
 #define MAX_HANDLERS_NUM 5
-#define FILE_MAX_BUF_SIZE 1048576
+#define FILE_MAX_BUF_SIZE (1024 * 1024 * 10)
 #define FILE_READ_FULL -1
 
 #include "windows.h"

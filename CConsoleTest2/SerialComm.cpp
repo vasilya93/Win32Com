@@ -97,6 +97,8 @@ bool SerialComm::Connect(const wchar_t* port, int baudrate, unsigned int& errMes
 	dcb.ByteSize = 8;
 	dcb.Parity = NOPARITY;
 	dcb.StopBits = ONESTOPBIT;
+	//dcb.fOutxCtsFlow = FALSE;
+	//dcb.fRtsControl = RTS_CONTROL_DISABLE;
 	bSuccess = SetCommState(hPort, &dcb);
 	if(!bSuccess)
 	{
@@ -167,13 +169,14 @@ bool SerialComm::Write(char* line, unsigned long lineSize, bool* isLineUsed)
 	{
 		if(GetLastError() != ERROR_IO_PENDING)
 		{
-			//MessageBox(NULL, L"WriteFile error", L"Error", MB_OK);
+			MessageBox(NULL, L"WriteFile error", L"Error", MB_OK);
 			_isWriteRunning = false;
 			return false;
 		}
 	}
 
 	_packetCounter++;
+	_internalHigh = _writeSync.InternalHigh;
 
 	WriteThread = std::thread(&SerialComm::_writeThread, std::ref(*this));
 	WriteThread.detach();
@@ -188,10 +191,11 @@ void SerialComm::_writeThread()
 	unsigned long charsWritten;
 	if(!GetOverlappedResult(hPort, &_writeSync, &charsWritten, true))
 	{
-		wchar_t* message = new wchar_t[100];
-		swprintf(message, 100, L"GetOverlappedResult error on write. Packet #%d", _packetCounter);
-		MessageBox(NULL, message, L"Error", MB_OK);
-		delete message;
+		/*unsigned long error = GetLastError();
+		wchar_t* errorMessage = new wchar_t[200];
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, 0, errorMessage, 200, NULL);
+		MessageBox(NULL, errorMessage, L"Error", MB_OK);
+		delete errorMessage;*/
 	}
 
 	_isWriteRunning = false;

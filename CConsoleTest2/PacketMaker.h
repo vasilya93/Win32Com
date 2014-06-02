@@ -59,6 +59,7 @@ class PacketMaker
 	Converter _converter;
 
 	//Functions
+	unsigned char _reserveBuf(unsigned char);
 	unsigned char _switchCurrentBuf(unsigned char*);
 	void _finishSentPacket(bool isLast);
 
@@ -85,7 +86,7 @@ public:
 	bool PushReceivedBytes(char*, unsigned int);
 	void PushSentData(char*, unsigned int, bool);
 
-	char* GetReceivedData(unsigned int&);
+	unsigned long GetReceivedData(unsigned long, char*);
 };
 
 #endif

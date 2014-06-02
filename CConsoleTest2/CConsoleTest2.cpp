@@ -39,21 +39,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			result = false;
 		}
-		else if(!strcmp("connect", answer))
-		{
-			scanf_s("%49s", answer, MAIN_ANSWER_SIZE);
-			size_t convNum;
-			mbstowcs_s(&convNum, port, MAIN_ANSWER_SIZE, answer, _TRUNCATE);
-			unsigned int error;
-			manag.Connect(port, 115200, error);
-		}
+		//actions for individual com-port class
 		else if(!strcmp("connectser", answer))
 		{
 			scanf_s("%49s", answer, MAIN_ANSWER_SIZE);
 			size_t convNum;
 			mbstowcs_s(&convNum, port, MAIN_ANSWER_SIZE, answer, _TRUNCATE);
 			unsigned int error;
-			comm.Connect(port, 115200, error);
+			comm.Connect(port, 3000000, error);
 		}
 		else if(!strcmp("send", answer))
 		{
@@ -61,13 +54,23 @@ int _tmain(int argc, _TCHAR* argv[])
 			bool isLineBusy = true;
 			comm.Write(answer, strlen(answer), &isLineBusy);
 		}
+
+		//actions for com-manger class
+		else if(!strcmp("connect", answer))
+		{
+			scanf_s("%49s", answer, MAIN_ANSWER_SIZE);
+			size_t convNum;
+			mbstowcs_s(&convNum, port, MAIN_ANSWER_SIZE, answer, _TRUNCATE);
+			unsigned int error;
+			manag.Connect(port, 3000000, error);
+		}
 		else if(!strcmp("file", answer))
 		{
-			manag.TransmitFile(L"C:\\Users\\vasil_000\\Desktop\\chapter1.txt");
+			manag.TransmitFile(L"C:\\Users\\vasil_000\\Desktop\\arch.rar");
 		}
-		else if(!strcmp("rewrite", answer))
+		else if(!strcmp("save", answer))
 		{
-			manag.RewriteFile(L"C:\\Users\\vasil_000\\Desktop\\DSC05756.rar"); //DSC05756.jpg
+			manag.WriteFile(L"C:\\Users\\vasil_000\\Desktop\\received.rar");
 		}
 	}
 
