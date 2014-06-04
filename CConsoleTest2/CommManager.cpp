@@ -51,6 +51,12 @@ void CommManager::WriteFile(wchar_t* fileName)
 	_doWriteToFile = true;
 }
 
+void CommManager::GetTransactParams(unsigned long& bufCounter, unsigned long& firstTick, unsigned long& lastTick)
+{
+	bufCounter = _recBufCounter;
+	_serialComm.ResetTick(&firstTick, &lastTick);
+}
+
 //----------------------------------Handlers ---------------------------------
 
 void CommManager::SerialBytesReceivedHandler(char* bytes, unsigned int bytesNum)

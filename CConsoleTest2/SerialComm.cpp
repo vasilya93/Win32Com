@@ -1,6 +1,5 @@
 #include "SerialComm.h"
 #include "windows.h"
-//#include "stdio.h"
 #include "assert.h"
 #include "thread"
 
@@ -12,12 +11,13 @@ SerialComm::SerialComm()
 {
 	_packetCounter = 0;
 
-	_receivedTotal = 0;
 	_writeSync.hEvent = INVALID_HANDLE_VALUE;
 	HandlersNum = 0;
-	_lastTimeCount = 0;
+
+	_firstTick = 0;
+	_lastTick = 0;
+
 	_isReadingContinued = false;
-	_isWriteRunning = false;
 	ReadBufSize = READ_BUF_SIZE + 1;
 	ReadBuf = new char[ReadBufSize];
 	hPort = 0;
@@ -48,14 +48,17 @@ char* SerialComm::GetReadBuf()
 	return ReadBuf;
 }
 
-unsigned long SerialComm::GetLastTime()
+bool SerialComm::ResetTick(unsigned long* firstTick, unsigned long* lastTick)
 {
-	return _lastTimeCount;
-}
-
-unsigned long SerialComm::GetBaudrate()
-{
-	return _actualBaudrate;
+	if (firstTick==NULL || lastTick==NULL)
+	{
+		return false;
+	}
+	*firstTick = _firstTick;
+	*lastTick = _lastTick;
+	_firstTick = 0;
+	_lastTick = 0;
+	return true;
 }
 
 //-----------------------------------------Functions ----------------------------------------
@@ -97,16 +100,16 @@ bool SerialComm::Connect(const wchar_t* port, int baudrate, unsigned int& errMes
 	dcb.ByteSize = 8;
 	dcb.Parity = NOPARITY;
 	dcb.StopBits = ONESTOPBIT;
-	//dcb.fOutxCtsFlow = FALSE;
-	//dcb.fRtsControl = RTS_CONTROL_DISABLE;
+	dcb.fOutxCtsFlow = TRUE;
+	dcb.fRtsControl = RTS_CONTROL_HANDSHAKE;
 	bSuccess = SetCommState(hPort, &dcb);
 	if(!bSuccess)
 	{
 		errMessage = COMM_EM_STSTFL;
 		return false;
 	}
-	GetCommState(hPort, &dcb);	//int timeoutConstant = (1.0/dwSelectedBaudrate*9*BUFFER_SIZE)/0.001;
-	COMMTIMEOUTS Timeouts = {0, 0, 100/*timeoutConstant*/, 0, 0};
+	GetCommState(hPort, &dcb);
+	COMMTIMEOUTS Timeouts = {1, 0, 100/*timeoutConstant*/, 0, 0};
 	bSuccess = SetCommTimeouts(hPort, &Timeouts);
 	if(!bSuccess)
 	{
@@ -116,9 +119,8 @@ bool SerialComm::Connect(const wchar_t* port, int baudrate, unsigned int& errMes
 
 	_isReadingContinued = true;
 
-	_lastTimeCount = GetTickCount();
 	ReadThread = std::thread(&SerialComm::_readThread, std::ref(*this));
-	TimeThread = std::thread(&SerialComm::_timingThread, std::ref(*this));//launches the thread
+	//TimeThread = std::thread(&SerialComm::_timingThread, std::ref(*this));//launches the thread
 	//when the function returns - the thread terminates
 
 	return true;
@@ -131,7 +133,6 @@ void SerialComm::Disconnect()
 	if(hPort != 0)
 	{
 		_isReadingContinued = false;
-		while(_isWriteRunning);
 		WriteThread.join();
 		ReadThread.join();
 		TimeThread.join();
@@ -151,12 +152,7 @@ bool SerialComm::Write(char* line, unsigned long lineSize, bool* isLineUsed)
 		int i = 1;
 	}
 
-	while(_isWriteRunning)
-	{
-		Sleep(0);
-	}
-
-	_isWriteRunning = true;
+	_writeMutex.lock();
 
 	if(_writeSync.hEvent != INVALID_HANDLE_VALUE)
 	{
@@ -164,13 +160,19 @@ bool SerialComm::Write(char* line, unsigned long lineSize, bool* isLineUsed)
 	}
 	ZeroMemory(&_writeSync, sizeof(OVERLAPPED));
 	_writeSync.hEvent = CreateEvent(NULL, false, false, NULL);
-		
+
 	if(!WriteFile(hPort, line, lineSize, NULL, &_writeSync))
 	{
 		if(GetLastError() != ERROR_IO_PENDING)
 		{
-			MessageBox(NULL, L"WriteFile error", L"Error", MB_OK);
-			_isWriteRunning = false;
+			unsigned long error = GetLastError();
+			wchar_t* errorMessage = new wchar_t[200];
+			//wcscpy_s(errorMessage, 200, L"WriteFile:");
+			//unsigned long length = wcslen(errorMessage);
+			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, 0, errorMessage, 200, NULL);
+			MessageBox(NULL, errorMessage, L"Error", MB_OK);
+			delete errorMessage;
+			_writeMutex.unlock();
 			return false;
 		}
 	}
@@ -191,14 +193,16 @@ void SerialComm::_writeThread()
 	unsigned long charsWritten;
 	if(!GetOverlappedResult(hPort, &_writeSync, &charsWritten, true))
 	{
-		/*unsigned long error = GetLastError();
+		unsigned long error = GetLastError();
 		wchar_t* errorMessage = new wchar_t[200];
-		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, 0, errorMessage, 200, NULL);
+		wcscpy_s(errorMessage, 200, L"GetOverlapped:");
+		unsigned long length = wcslen(errorMessage);
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, 0, &(errorMessage[length + 1]), 200-length, NULL);
 		MessageBox(NULL, errorMessage, L"Error", MB_OK);
-		delete errorMessage;*/
+		delete errorMessage;
 	}
 
-	_isWriteRunning = false;
+	_writeMutex.unlock();
 	*_isLineUsed = false;
 
 	return;
@@ -211,17 +215,17 @@ void SerialComm::_timingThread()
 	while(_isReadingContinued)
 	{
 		Sleep(1000);
-	//	currentCount = GetTickCount();
-	//	if(currentCount != LastTimeCount)
-	//	{
-	//		_baudrate = float(BytesPerSecond) * 9.0 / (((float)currentCount - (float)LastTimeCount)/1000.0);
-	//		LastTimeCount = currentCount;
-	//		BytesPerSecond = 0;
-	//		for (unsigned int i = 0; i < HandlersNum; i++)
-	//		{
-	//			HandlersHosts[i]->SerialBaudrateChangedHandler(ReadBuf, bytesRead);
-	//		}
-	//	}
+		//	currentCount = GetTickCount();
+		//	if(currentCount != LastTimeCount)
+		//	{
+		//		_baudrate = float(BytesPerSecond) * 9.0 / (((float)currentCount - (float)LastTimeCount)/1000.0);
+		//		LastTimeCount = currentCount;
+		//		BytesPerSecond = 0;
+		//		for (unsigned int i = 0; i < HandlersNum; i++)
+		//		{
+		//			HandlersHosts[i]->SerialBaudrateChangedHandler(ReadBuf, bytesRead);
+		//		}
+		//	}
 	}
 }
 
@@ -235,7 +239,8 @@ void SerialComm::_readThread()
 	sync.hEvent = hReadCompEvent;
 	while(_isReadingContinued)
 	{
-		isSuccess = ReadFile(hPort, ReadBuf, (ReadBufSize - 1), NULL, &sync);
+		isSuccess = ReadFile(hPort, ReadBuf, (ReadBufSize - 1), NULL, &sync); //зачем делать еще GetOverlapped result
+																			  //логгировать фэйлы в файл
 		if(!isSuccess)
 		{
 			error = GetLastError();
@@ -247,12 +252,16 @@ void SerialComm::_readThread()
 		isSuccess = GetOverlappedResult(hPort, &sync, &bytesRead, true);
 		if(!isSuccess)
 		{
-			return;
+			return; //катастрофически же
 		}
 		if(bytesRead > 0)
 		{
+			_lastTick = GetTickCount();
+			if(_firstTick == 0)
+			{
+				_firstTick = _lastTick;
+			}
 			ReadBuf[bytesRead] = '\0';
-			_receivedTotal += bytesRead;
 			for (unsigned int i = 0; i < HandlersNum; i++)
 			{
 				HandlersHosts[i]->SerialBytesReceivedHandler(ReadBuf, bytesRead);

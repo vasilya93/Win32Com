@@ -55,6 +55,7 @@ public:
 	bool Connect(const wchar_t* port, int baudrate, unsigned int& errMessage){return _serialComm.Connect(port,baudrate,errMessage);}
 	void TransmitFile(wchar_t*);
 	void WriteFile(wchar_t* fileName);
+	void GetTransactParams(unsigned long&, unsigned long&, unsigned long&);
 
 	void SerialBytesReceivedHandler(char*, unsigned int);
 	void SerialBaudrateChangedHandler(unsigned long);

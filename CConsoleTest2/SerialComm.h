@@ -41,9 +41,8 @@ class SerialComm
 	HANDLE hPort;
 
 	//-------------------------------Read elements -------------------------------
-	unsigned long _receivedTotal;  //data for actual baudrate calculation
-	unsigned long _lastTimeCount;
-	unsigned long _actualBaudrate;
+	unsigned long _firstTick;  //data for actual baudrate calculation, single transaction
+	unsigned long _lastTick;
 	
 	bool _isReadingContinued; //thread data	
 	
@@ -53,8 +52,8 @@ class SerialComm
 	//-------------------------------Write elements -------------------------------
 
 	OVERLAPPED _writeSync; //thread data
-	bool _isWriteRunning;
-	bool* _isLineUsed;
+	std::mutex _writeMutex;
+	bool* _isLineUsed;//means line transferred to be transmitted
 	
 	void _writeThread();
 	void _timingThread();
@@ -71,12 +70,10 @@ public:
 	SerialComm();
 	~SerialComm();
 
-	unsigned long GetReceivedTotal(){return _receivedTotal;}
 	HANDLE GetPort();
 	OVERLAPPED GetSync();
 	char* GetReadBuf();
-	unsigned long GetLastTime();
-	unsigned long GetBaudrate();
+	bool ResetTick(unsigned long*, unsigned long*);
 
 	bool AttachHandlerHost(SerialCommSubscribable* newHost);
 	bool Connect(const wchar_t* port, int baudrate, unsigned int& errMessage);

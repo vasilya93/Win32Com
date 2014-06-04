@@ -66,11 +66,20 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		else if(!strcmp("file", answer))
 		{
-			manag.TransmitFile(L"C:\\Users\\vasil_000\\Desktop\\arch.rar");
+			manag.TransmitFile(L"financier.txt");
 		}
 		else if(!strcmp("save", answer))
 		{
-			manag.WriteFile(L"C:\\Users\\vasil_000\\Desktop\\received.rar");
+			unsigned long bytesNum, firstTick, lastTick;
+			manag.GetTransactParams(bytesNum, firstTick, lastTick);
+			unsigned long interval = lastTick - firstTick;
+			printf("Bytes received: %u\r\n", bytesNum);
+			printf("Time interval: %u\r\n", interval);
+			if(interval!=0)
+			{
+				printf("Approx. baudrate: %u\r\n", (bytesNum*9*1000)/(interval));
+			}
+			manag.WriteFile(L"received.txt");
 		}
 	}
 
