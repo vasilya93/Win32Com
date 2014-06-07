@@ -18,6 +18,7 @@ SerialComm::SerialComm()
 	_lastTick = 0;
 
 	_isReadingContinued = false;
+	_isWriteRunning = false;
 	ReadBufSize = READ_BUF_SIZE + 1;
 	ReadBuf = new char[ReadBufSize];
 	hPort = 0;
@@ -133,6 +134,7 @@ void SerialComm::Disconnect()
 	if(hPort != 0)
 	{
 		_isReadingContinued = false;
+		while(_isWriteRunning);
 		WriteThread.join();
 		ReadThread.join();
 		TimeThread.join();
@@ -147,12 +149,9 @@ bool SerialComm::Write(char* line, unsigned long lineSize, bool* isLineUsed)
 	assert(*isLineUsed = true);
 	_isLineUsed = isLineUsed;
 
-	if(_packetCounter%23 == 0 && _packetCounter != 0)
-	{
-		int i = 1;
-	}
+	while(_isWriteRunning);
 
-	_writeMutex.lock();
+	_isWriteRunning = true;
 
 	if(_writeSync.hEvent != INVALID_HANDLE_VALUE)
 	{
@@ -172,7 +171,7 @@ bool SerialComm::Write(char* line, unsigned long lineSize, bool* isLineUsed)
 			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, 0, errorMessage, 200, NULL);
 			MessageBox(NULL, errorMessage, L"Error", MB_OK);
 			delete errorMessage;
-			_writeMutex.unlock();
+			_isWriteRunning = false;
 			return false;
 		}
 	}
@@ -202,7 +201,7 @@ void SerialComm::_writeThread()
 		delete errorMessage;
 	}
 
-	_writeMutex.unlock();
+	_isWriteRunning = false;
 	*_isLineUsed = false;
 
 	return;

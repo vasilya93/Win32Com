@@ -52,7 +52,7 @@ class SerialComm
 	//-------------------------------Write elements -------------------------------
 
 	OVERLAPPED _writeSync; //thread data
-	std::mutex _writeMutex;
+	bool _isWriteRunning;
 	bool* _isLineUsed;//means line transferred to be transmitted
 	
 	void _writeThread();
