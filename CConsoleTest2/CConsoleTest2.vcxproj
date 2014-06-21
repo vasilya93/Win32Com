@@ -53,7 +53,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -84,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommManager.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="PacketMaker.h" />
     <ClInclude Include="SerialComm.h" />
     <ClInclude Include="ConsoleWriter.h" />
@@ -94,6 +95,7 @@
   <ItemGroup>
     <ClCompile Include="CConsoleTest2.cpp" />
     <ClCompile Include="CommManager.cpp" />
+    <ClCompile Include="Log.cpp" />
     <ClCompile Include="PacketMaker.cpp" />
     <ClCompile Include="SerialComm.cpp" />
     <ClCompile Include="FileIO.cpp" />

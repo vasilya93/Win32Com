@@ -21,6 +21,7 @@
 #define PM_PACKET_SIZE (PM_DATA_SIZE + PM_SIGNS_SIZE + PM_DLEN_SIZE + PM_CHECK_SIZE)
 
 #include "string.h"
+#include "Log.h"
 
 //packet form:
 //1 byte of signs (first packet, data packet, last packet)
@@ -47,7 +48,7 @@ class PacketMaker
 
 
 	char* _sentBuf[2];
-	bool _isSentBufUsed[2]; //устанавливается, когда запись в буффер завершена; снимается, когда чтение из буффера завершено
+	volatile bool _isSentBufUsed[2]; //устанавливается, когда запись в буффер завершена; снимается, когда чтение из буффера завершено
 							//в буффер нельзя писать, если для него установлен этот флаг; буффер нельзя получить, если для него не установлен это флаг
 	
 	unsigned char _writtenSentBuf; //тот, в который идет запись
@@ -64,6 +65,9 @@ class PacketMaker
 	void _finishSentPacket(bool isLast);
 
 public:
+	//linked objects
+	Log* CommLog;
+
 	//Constructors and destructors
 	PacketMaker();
 	~PacketMaker();
@@ -76,7 +80,7 @@ public:
 
 	bool IsReceivedDataReady();
 
-	char* GetSentPacket(bool** isPacketUsed);
+	char* GetSentPacket(volatile bool** isPacketUsed);
 	bool IsSentPackUsed(){return _isSentBufUsed[_sentSentBuf];}
 
 	//Funcs

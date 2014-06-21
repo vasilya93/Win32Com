@@ -69,7 +69,7 @@ bool PacketMaker::IsReceivedDataReady()
 	return !_isRecReserveFree;
 }
 
-char* PacketMaker::GetSentPacket(bool** isPacketUsed)
+char* PacketMaker::GetSentPacket(volatile bool** isPacketUsed)
 {
 	if(!_isSentBufUsed[_sentSentBuf])
 	{
@@ -234,5 +234,10 @@ void PacketMaker::_finishSentPacket(bool isLastData)
 	_switchCurrentBuf(&_writtenSentBuf);
 	_sentInPos = 0;
 	_sentBufLeft = PM_DATA_SIZE;
+	if(_isSentBufUsed[_writtenSentBuf])
+	{
+		CommLog->AddMessage("PacketMaker._finishSentPacket: other packet is used\r\n");
+	}
 	while(_isSentBufUsed[_writtenSentBuf]);
+	CommLog->AddMessage("PacketMaker._finishSentPacket: other packet is free\r\n");
 }

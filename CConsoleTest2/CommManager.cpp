@@ -3,8 +3,17 @@
 //--------------------------------Constructors -------------------------------
 CommManager::CommManager() : FileIOSubscribable(), SerialCommSubscribable()
 {
-	_fileIO.AttachBRHandler(this);
-	_fileIO.SetWriteFile(L"C:\\Users\\vasil_000\\Desktop\\received.txt");
+	_fileIO = new FileIO();
+	_fileIO->AttachBRHandler(this);
+	_fileIO->SetWriteFile(L"C:\\Users\\vasil_000\\Desktop\\received.txt");
+
+
+	_log = new Log(_fileIO);
+	//а что он удаляет
+	//конструктор, копирование, деструктор
+	_serialComm.CommLog = _log;
+	_packetMaker.CommLog = _log;
+
 	_serialComm.AttachHandlerHost(this);
 	_sentFileBuf = new char[0];
 	_sentBufCounter = 0;
@@ -25,6 +34,8 @@ CommManager::CommManager() : FileIOSubscribable(), SerialCommSubscribable()
 
 	_isMainThreadRunning = true;
 	_mainThread = std::thread(&CommManager::_mainThreadFunc, std::ref(*this));
+	
+	_log->AddMessage("CommManager is created\r\n");
 }
 
 //--------------------------------Destructors -------------------------------
@@ -35,19 +46,21 @@ CommManager::~CommManager()
 	_mainThread.join();
 	delete _sentFileBuf;
 	delete _recFileBuf;
+	delete _log;
+	delete _fileIO;
 }
 
 //--------------------------------Public methods -------------------------------
 
 void CommManager::TransmitFile(wchar_t* fileName)
 {
-	_fileIO.SetReadFile(fileName);
-	_fileIO.ReadFileBytes(FILE_READ_FULL);
+	_fileIO->SetReadFile(fileName);
+	_fileIO->ReadFileBytes(FILE_READ_FULL);
 }
 
 void CommManager::WriteFile(wchar_t* fileName)
 {
-	_fileIO.SetWriteFile(fileName);
+	_fileIO->SetWriteFile(fileName);
 	_doWriteToFile = true;
 }
 
@@ -84,6 +97,7 @@ void CommManager::SerialNothingReceivedHandler()
 
 void CommManager::FileBytesReadHandler(char* bytes, unsigned long bytesNum, bool isLast)
 {
+	_log->AddMessage("CommManager.FileBytesReadHandler: bytes are read from file.\r\n");
 	_bytesLeftToSend = bytesNum;
 	_sentBufCounter = 0;
 	delete _sentFileBuf;
@@ -125,35 +139,42 @@ void CommManager::_mainThreadFunc()
 
 void CommManager::_writeSentBufToSerial()
 {
+	_log->AddMessage("CommManager._writeSentBufToSerial: operation began.\r\n");
 	_packetMaker.BeginSentMessage();
 	while(_bytesLeftToSend > 0)
 	{
+		_log->AddMessage("CommManager._writeSentBufToSerial: bytes left more than zero.\r\n");
 		if(_bytesLeftToSend > PM_DATA_SIZE)
 		{
-			_packetMaker.PushSentData(&(_sentFileBuf[_sentBufCounter]), PM_DATA_SIZE, false);
+			_log->AddMessage("CommManager._writeSentBufToSerial: bytes left more than data size.\r\n");
+			_packetMaker.PushSentData(&(_sentFileBuf[_sentBufCounter]), PM_DATA_SIZE, false); //где ставить флаги?
 			_sentBufCounter += PM_DATA_SIZE;
 			_bytesLeftToSend -= PM_DATA_SIZE;
 			if(_packetMaker.IsSentPackUsed())
 			{
-				bool *isSentPackUsed = NULL;
+				_log->AddMessage("CommManager._writeSentBufToSerial: packet is ready to be sent.\r\n");
+				volatile bool *isSentPackUsed = NULL;
 				char* writtenLine = _packetMaker.GetSentPacket(&isSentPackUsed);
 				_serialComm.Write(writtenLine, PM_PACKET_SIZE, isSentPackUsed); // wait for the end of transmission
 			}																	// все равно основной поток будет ждать
 		}
 		else	
-		{	
+		{
+			_log->AddMessage("CommManager._writeSentBufToSerial: bytes left less than data size.\r\n");
 			_packetMaker.PushSentData(&(_sentFileBuf[_sentBufCounter]), _bytesLeftToSend, true);
 			_sentBufCounter = 0;
 			_bytesLeftToSend = 0;
 			if(_packetMaker.IsSentPackUsed())
 			{
-				bool *isSentPackUsed = NULL;
+				_log->AddMessage("CommManager._writeSentBufToSerial: packet is ready to be sent.\r\n");
+				volatile bool *isSentPackUsed = NULL;
 				char* writtenLine = _packetMaker.GetSentPacket(&isSentPackUsed);
 				_serialComm.Write(writtenLine, PM_PACKET_SIZE, isSentPackUsed); // wait for the end of transmission
 			}
 			if(_packetMaker.IsSentPackUsed())
 			{
-				bool *isSentPackUsed = NULL;
+				_log->AddMessage("CommManager._writeSentBufToSerial: packet is ready to be sent.\r\n");
+				volatile bool *isSentPackUsed = NULL;
 				char* writtenLine = _packetMaker.GetSentPacket(&isSentPackUsed);
 				_serialComm.Write(writtenLine, PM_PACKET_SIZE, isSentPackUsed); // wait for the end of transmission, хорошо ли это? наверное нет
 
@@ -182,7 +203,7 @@ void CommManager::_writeRecBufToFile()
 			_writeBufLeft -= dataSize;
 		}
 	}
-	_fileIO.WriteBytes(_writeFileBuf, _writeBufCounter, false); // need to make sure that the buffer is not rewriten, paste buffer
+	_fileIO->WriteBytes(_writeFileBuf, _writeBufCounter, false, false); // need to make sure that the buffer is not rewriten, paste buffer
 	_recBufHandledCounter = 0;
 	_writeBufCounter = 0;
 	_writeBufLeft = MANAG_SIZE_RECBUF;
