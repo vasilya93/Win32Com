@@ -136,7 +136,7 @@ bool FileIO::ReadFileBytes(int bytesNum)
 	return true;
 }
 
-bool FileIO::WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend)
+bool FileIO::WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend, bool doDeleteBuf)
 {
 	if (_writeFileName == L"" || bytes == NULL)
 	{
@@ -148,6 +148,11 @@ bool FileIO::WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend)
 	{
 		Sleep(0);
 	}
+
+	_isWriteRunning = true;
+
+	_doDeleteBuf = doDeleteBuf;
+	_writeBuf = bytes;
 
 	if(_writeSync.hEvent != INVALID_HANDLE_VALUE)
 	{
@@ -183,7 +188,6 @@ bool FileIO::WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend)
 		}
 	}
 
-	_isWriteRunning = true;
 	std::thread writeThread(&FileIO::_writeThread, std::ref(*this));
 	writeThread.detach();
 
@@ -233,6 +237,12 @@ void FileIO::_writeThread()
 	}
 
 	CloseHandle(hWriteFile);
+
+	if(_doDeleteBuf)
+	{
+		delete _writeBuf;
+	}
+
 	_isWriteRunning = false;
 
 	return;

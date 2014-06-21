@@ -17,6 +17,7 @@
 #include "thread"
 #include "mutex"
 #include "FileIO.h"
+#include "Log.h"
 
 class SerialCommSubscribable
 {
@@ -36,6 +37,7 @@ class SerialComm
 	unsigned int _packetCounter;
 	unsigned long _internalHigh;
 
+
 	//-----------------------------Read/write common -----------------------------
 
 	HANDLE hPort;
@@ -52,14 +54,18 @@ class SerialComm
 	//-------------------------------Write elements -------------------------------
 
 	OVERLAPPED _writeSync; //thread data
-	std::mutex _writeMutex;
-	bool* _isLineUsed;//means line transferred to be transmitted
+	bool _isWriteRunning;
+	volatile bool* _isLineUsed;//means line transferred to be transmitted
 	
 	void _writeThread();
 	void _timingThread();
 	void _readThread();
 
 public:
+//-----------------------------Linked objects -----------------------------
+
+	Log* CommLog;
+
 	std::thread ReadThread;
 	std::thread TimeThread;
 	std::thread WriteThread;
@@ -81,7 +87,7 @@ public:
 
 	SerialComm& operator = (SerialComm& comm);
 
-	bool Write(char* line, unsigned long lineSize, bool* isLineUsed);
+	bool Write(char* line, unsigned long lineSize, volatile bool* isLineUsed);
 };
 
 #endif

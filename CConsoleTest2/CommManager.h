@@ -6,13 +6,15 @@
 #include "FileIO.h"
 #include "SerialComm.h"
 #include "PacketMaker.h"
+#include "Log.h"
 
 class CommManager : public SerialCommSubscribable, public FileIOSubscribable 
 {
 	// Linked objects
-	FileIO _fileIO;
+	FileIO* _fileIO;
 	SerialComm _serialComm;
 	PacketMaker _packetMaker;
+	Log* _log;
 
 
 	char* _sentFileBuf; //send buffer details
@@ -56,6 +58,10 @@ public:
 	void TransmitFile(wchar_t*);
 	void WriteFile(wchar_t* fileName);
 	void GetTransactParams(unsigned long&, unsigned long&, unsigned long&);
+
+	//Log wrappers
+	void SaveLogToFile(){_log->SaveToFile();}
+	void ClearLog(){_log->Clear();}
 
 	void SerialBytesReceivedHandler(char*, unsigned int);
 	void SerialBaudrateChangedHandler(unsigned long);

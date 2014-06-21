@@ -48,6 +48,8 @@ class FileIO
 	bool _isWriteRunning;
 
 	unsigned long _bytesWritten; // current operation data
+	char* _writeBuf;
+	bool _doDeleteBuf;
 
 	void _writeThread();
 
@@ -56,6 +58,7 @@ public:
 	FileIO();
 	~FileIO();
 
+	//Access functions
 	unsigned long GetBytesRead();
 	char* GetReadBuf();
 
@@ -64,8 +67,9 @@ public:
 
 	bool AttachBRHandler(FileIOSubscribable* handlerHost);
 
+	//Functions
 	bool ReadFileBytes(int bytesNum); //getting bytes with offset
-	bool WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend); //it is the task of the method to write all bytes that is why
+	bool WriteBytes(char* bytes, unsigned int bytesNum, bool doAppend, bool doDeleteBuf); //it is the task of the method to write all bytes that is why
 																	//no number of written bytes is referenced
 };
 
